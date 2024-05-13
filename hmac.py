@@ -18,12 +18,27 @@ class HMAC:
             key = self.digest_cons(key).digest()
         key = key.ljust(self.blocksize, b'\x00')
 
-        # Generate inner and outer pads dynamically based on the key length
-        self.inner_pad = bytes((x ^ 0x36) for x in key)
-        self.outer_pad = bytes((x ^ 0x5C) for x in key)
+        # Dynamic key transformation for ipad opad
+        ipad, opad = self._transform_key(key)
+
+        self.inner_pad = bytes(ipad)
+        self.outer_pad = bytes(opad)
 
         # Precompute the outer hash of the inner pad
         self.outer.update(self.inner_pad)
+
+    def _transform_key(self, key):
+        substitution_value = 0xAB
+
+        substituted_key = [substitution_value ^ byte for byte in key]
+
+        permuted_key = substituted_key[::-1]
+
+        key_length = len(permuted_key)
+        ipad = permuted_key[:key_length // 2]
+        opad = permuted_key[key_length // 2:]
+
+        return ipad, opad
 
     def update(self, msg):
         self.inner.update(msg)
@@ -38,7 +53,6 @@ class HMAC:
 
     def hexdigest(self):
         return self.finalize().hex()
-
 
     def digest(self):
         return self.finalize().digest()
@@ -70,4 +84,4 @@ def main():
 
 if __name__ == '__main__':
     main()
- #type: ignore
+#type: ignore
